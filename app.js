@@ -1001,7 +1001,16 @@ async function extractPDF(f) {
     rows.sort((a, b) => b.y - a.y);
 
     const pageText = tc.items.map(it => it.str).join(" ").toLowerCase();
-    const isElectoralPage = pageText.includes("elector") || pageText.includes("relationship") || pageText.includes("epic no");
+    const isElectoralPage = pageText.includes("elector") || 
+                            pageText.includes("relationship") || 
+                            pageText.includes("epic no") ||
+                            pageText.includes("voter") ||
+                            pageText.includes("relationship signals") ||
+                            pageText.includes("photo id number") ||
+                            pageText.includes("jr¡") ||
+                            pageText.includes("¤‹à") ||
+                            pageText.includes("î®¡à") ||
+                            pageText.includes("î³[ê");
 
     let structuredRows;
     if (isElectoralPage) {
@@ -1078,7 +1087,17 @@ async function extractPDF(f) {
 
     structuredRows.forEach((row) => {
       const rowText = row.join(" ").toLowerCase();
-      if (rowText.includes("elector") || rowText.includes("constituency") || rowText.includes("relation") || rowText.includes("epic")) {
+      if (
+        rowText.includes("elector") || 
+        rowText.includes("constituency") || 
+        rowText.includes("relation") || 
+        rowText.includes("epic") ||
+        rowText.includes("jr¡") ||
+        rowText.includes("¤‹à") ||
+        rowText.includes("î®¡à") ||
+        rowText.includes("î³[ê") ||
+        rowText.includes("legislative assembly")
+      ) {
         return; 
       }
 
@@ -1155,6 +1174,23 @@ function extractSnippet(text, query, cs, radius, forceIndex = -1) { const cmp = 
 function escapeRegex(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
 
 // Removed old showResults as it is now incremental via appendResult and finalizeResults
+function translateMetadata(text) {
+  let cleaned = text;
+  
+  // Replace assembly constituency label
+  cleaned = cleaned.replace(/\[\s*¤\s*‹\s*à\s*>\s*Î\s*®\s*¡\s*à\s+Î\s*³\s*\[\s*Ê/gi, "Assembly Constituency:");
+  cleaned = cleaned.replace(/\[\s*¤\s*‹\s*à\s*>\s*Î\s*®\s*¡\s*à/gi, "Assembly Constituency:");
+  cleaned = cleaned.replace(/Î\s*³\s*\[\s*Ê/gi, "");
+  cleaned = cleaned.replace(/Legislative\s+assembly/gi, "Assembly Constituency:");
+  
+  // Replace Part No label
+  cleaned = cleaned.replace(/J\s*r\s*¡\s*>\s*\}\s*-\s*/g, "Part No: ");
+  cleaned = cleaned.replace(/J\s*r\s*¡\s*>\s*\}\s*/g, "Part No: ");
+  cleaned = cleaned.replace(/J\s*r\s*¡/gi, "Part No: ");
+  
+  return cleaned;
+}
+
 function buildCard({ fileInfo, matches }, terms, index) {
   const ext = getExt(fileInfo.name);
   const card = document.createElement('div'); card.className = 'result-card'; card.style.animationDelay = `${index * 50}ms`;
@@ -1178,7 +1214,17 @@ function buildCard({ fileInfo, matches }, terms, index) {
       let tableStart = allRows.findIndex(r => {
         const rowText = r.join(" ").toUpperCase();
         // Skip page headers like Constituency and PS NO so they stay in topRows metadata
-        if (rowText.includes("CONSTITUENCY") || rowText.includes("PS NO:")) return false;
+        if (
+          rowText.includes("CONSTITUENCY") || 
+          rowText.includes("PS NO:") || 
+          rowText.includes("LEGISLATIVE ASSEMBLY") ||
+          rowText.includes("STATE CODE") ||
+          rowText.includes("VOTERS LIST") ||
+          rowText.includes("[¤‹À>Î®¡À") ||
+          rowText.includes("Î³[Ê") ||
+          rowText.includes("JR¡ >}") ||
+          rowText.includes("PART NO")
+        ) return false;
         return r.filter(c => c.trim()).length >= 3;
       });
       if (tableStart === -1) tableStart = 0;
@@ -1359,10 +1405,15 @@ function buildCard({ fileInfo, matches }, terms, index) {
       }
 
       if (finalHead && finalHead.length === 8) {
-        const isElectorTable = finalHead.some(h => /elector|relation|epic|sex|gender|slno|sl\.no/i.test(h)) || 
-                               displayRows.some(row => row.some(cell => /AN\/\d+|^[A-Z]{3}\d+/i.test(cell)));
+        const isElectorTable = finalHead.some(h => /elector|relation|epic|sex|gender|slno|sl\.no|voter|house|serial|photo|signals|concerned/i.test(h)) || 
+                               displayRows.some(row => row.some(cell => /AN\/\d+|^[A-Z]{3}\d+/i.test(cell))) ||
+                               (displayRows.length > 0 && 
+                                !isNaN(displayRows[0][0]) && 
+                                !isNaN(displayRows[0][6]) && 
+                                parseInt(displayRows[0][6]) > 15 && 
+                                parseInt(displayRows[0][6]) < 120);
         if (isElectorTable) {
-          finalHead = ["Sl. No.", "House No.", "Name of Elector", "Relationship", "Name of Relation", "Sex", "Age", "EPIC No."];
+          finalHead = ["Serial No.", "House No.", "Full name of the voter", "Relationship Signals", "Full name of the person concerned", "Gender", "Age", "Photo ID Number"];
         }
       }
 
@@ -1474,9 +1525,13 @@ function buildCard({ fileInfo, matches }, terms, index) {
       }
 
       const topHtml = topRows.map(r => {
-        let text = escapeHtml(r.join(" ").replace(/\s+/g, " ").trim());
-        // Only inject the large gap specifically before "PS NO:"
-        const formatted = text.replace(/(\bPS\s+NO:)/i, "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;$1");
+        let text = r.join(" ").replace(/\s+/g, " ").trim();
+        text = translateMetadata(text);
+        let escaped = escapeHtml(text);
+        // Only inject the large gap specifically before "PS NO:" or "Part No:"
+        const formatted = escaped
+          .replace(/(\bPS\s+NO:)/i, "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;$1")
+          .replace(/(\bPart\s+No:)/i, "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;$1");
         return `<div class="match-table-meta">${formatted}</div>`;
       }).join("");
       

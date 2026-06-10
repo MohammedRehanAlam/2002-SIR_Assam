@@ -564,7 +564,16 @@ async function extractPDF(buffer) {
     rows.sort((a, b) => b.y - a.y);
 
     const pageText = tc.items.map(it => it.str).join(" ").toLowerCase();
-    const isElectoralPage = pageText.includes("elector") || pageText.includes("relationship") || pageText.includes("epic no");
+    const isElectoralPage = pageText.includes("elector") || 
+                            pageText.includes("relationship") || 
+                            pageText.includes("epic no") ||
+                            pageText.includes("voter") ||
+                            pageText.includes("relationship signals") ||
+                            pageText.includes("photo id number") ||
+                            pageText.includes("jr¡") ||
+                            pageText.includes("¤‹à") ||
+                            pageText.includes("î®¡à") ||
+                            pageText.includes("î³[ê");
 
     let structuredRows;
     if (isElectoralPage) {
@@ -637,7 +646,17 @@ async function extractPDF(buffer) {
 
     structuredRows.forEach((row) => {
       const rowText = row.join(" ").toLowerCase();
-      if (rowText.includes("elector") || rowText.includes("constituency") || rowText.includes("relation") || rowText.includes("epic")) {
+      if (
+        rowText.includes("elector") || 
+        rowText.includes("constituency") || 
+        rowText.includes("relation") || 
+        rowText.includes("epic") ||
+        rowText.includes("jr¡") ||
+        rowText.includes("¤‹à") ||
+        rowText.includes("î®¡à") ||
+        rowText.includes("î³[ê") ||
+        rowText.includes("legislative assembly")
+      ) {
         return; 
       }
 
