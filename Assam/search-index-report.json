@@ -1,8 +1,8 @@
 {
   "summary": {
-    "totalFoundInDirectory": 426,
-    "successfullyIndexed": 425,
-    "skippedEmpty": 1,
+    "totalFoundInDirectory": 18627,
+    "successfullyIndexed": 18624,
+    "skippedEmpty": 3,
     "corruptedFailed": 0,
     "ignoredUnsupported": 0
   },
@@ -10,6 +10,14 @@
   "skippedFiles": [
     {
       "path": "Assam/Baksa/58-Tamulpur/S03_58_17.pdf",
+      "reason": "Empty text / No content extracted"
+    },
+    {
+      "path": "Assam/Karbi Anglong/20-Baithalangso/S03_20_40.pdf",
+      "reason": "Empty text / No content extracted"
+    },
+    {
+      "path": "Assam/Tinsukia/124-Margherita/S03_124_19.pdf",
       "reason": "Empty text / No content extracted"
     }
   ],
